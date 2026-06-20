@@ -456,16 +456,17 @@ def plot_outputs(panel: pd.DataFrame) -> None:
     ax.set_ylabel("Basis points")
     ax.set_xlabel(None)
     handles, labels = ax.get_legend_handles_labels()
-    fig.suptitle("USD/CHF Covered Interest Parity Deviations", y=0.965, fontsize=12)
-    fig.legend(
+    ax.set_title("USD/CHF Covered Interest Parity Deviations", fontsize=12, pad=5)
+    ax.legend(
         handles,
         labels,
-        loc="upper center",
-        bbox_to_anchor=(0.5, 0.91),
+        loc="lower left",
         ncol=2,
         frameon=False,
-        handlelength=2.2,
-        columnspacing=1.2,
+        fontsize=7,
+        handlelength=2.0,
+        columnspacing=1.0,
+        borderaxespad=0.6,
     )
     ax.xaxis.set_major_locator(mdates.YearLocator(4))
     ax.xaxis.set_minor_locator(mdates.YearLocator())
@@ -478,8 +479,8 @@ def plot_outputs(panel: pd.DataFrame) -> None:
         "Note: D-K-S government-bond CIP is sign-adjusted to match the USD-minus-CHF convention. "
         "Series are annualized basis points."
     )
-    fig.text(0.13, 0.055, note, ha="left", va="bottom", fontsize=5.5, color=palette[8], wrap=True)
-    plt.subplots_adjust(left=0.13, right=0.97, top=0.72, bottom=0.22)
+    fig.text(0.13, 0.095, note, ha="left", va="bottom", fontsize=5.5, color=palette[8], wrap=True)
+    plt.subplots_adjust(left=0.13, right=0.97, top=0.90, bottom=0.25)
 
     os.makedirs(os.path.dirname(CONFIG["CHART_OUTPUT_PATH"]), exist_ok=True)
     plt.savefig(CONFIG["CHART_OUTPUT_PATH"])
