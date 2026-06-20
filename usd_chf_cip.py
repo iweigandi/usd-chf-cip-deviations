@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 usd_chf_cip.py
 
@@ -31,6 +31,9 @@ CONFIG = {
     "DATA_OUTPUT_PATH": "data/usd_chf_cip_deviations_monthly.csv",
     "DIAGNOSTICS_OUTPUT_PATH": "data/source_diagnostics.csv",
     "CHART_OUTPUT_PATH": "chart/usd_chf_cip_deviations.png",
+    "BENCHMARK_OUTPUT_PATH": "data/du_keerati_schreger_chf_cip_monthly.csv",
+    "VALIDATION_OUTPUT_PATH": "data/benchmark_validation.csv",
+    "DKS_CIP_URL": "https://jschreger.s3.us-east-2.amazonaws.com/cip_dataset_v4.csv",
     "DOWNLOAD_TIMEOUT_SECONDS": 30,
 }
 
@@ -70,7 +73,7 @@ def set_custom_style() -> list[str]:
             "axes.grid": False,
             "xtick.labelsize": 9,
             "ytick.labelsize": 9,
-            "legend.fontsize": 9,
+            "legend.fontsize": 7,
             "legend.frameon": False,
             "font.size": 10,
             "lines.linewidth": 1.5,
@@ -84,24 +87,11 @@ def set_custom_style() -> list[str]:
 
 
 def clean_text(value: str) -> str:
-    """Fixes common API mojibake and normalizes dash characters for output."""
+    """Normalizes API labels for robust matching and diagnostics."""
     value = str(value)
-    replacements = {
-        "Ã¢â‚¬â€œ": "-",
-        "Ã¢â‚¬â€": "-",
-        "Ã¢Ë†â€™": "-",
-        "â€“": "-",
-        "â€”": "-",
-        "âˆ’": "-",
-        "�": "-",
-        "−": "-",
-        "—": "-",
-        "–": "-",
-    }
-    for old, new in replacements.items():
-        value = value.replace(old, new)
+    for char in ("\u2010", "\u2011", "\u2012", "\u2013", "\u2014", "\u2212", "\ufffd"):
+        value = value.replace(char, "-")
     return re.sub(r"\s+", " ", value).strip()
-
 
 def normalize_label(value: str) -> str:
     """Normalizes labels for robust matching across API dash/spacing variants."""
@@ -227,6 +217,47 @@ def make_record(name: str, source: str, source_id: str, series: pd.Series) -> So
     )
 
 
+
+def dks_chf_govt_cip_monthly() -> tuple[pd.Series, pd.DataFrame, SourceRecord]:
+    """Loads the published CHF 3M government-bond CIP benchmark.
+
+    Du, Keerati, and Schreger report the basis as foreign government yield minus
+    the hedged forward premium minus the US Treasury yield. The sign is reversed
+    here to match this repository's USD-minus-CHF convention.
+    """
+    columns = ["currency", "tenor", "date", "cip_govt"]
+    chunks: list[pd.DataFrame] = []
+    for chunk in pd.read_csv(CONFIG["DKS_CIP_URL"], usecols=columns, chunksize=250_000):
+        subset = chunk[chunk["currency"].eq("CHF") & chunk["tenor"].eq("3m")].copy()
+        if not subset.empty:
+            chunks.append(subset)
+
+    if chunks:
+        daily = pd.concat(chunks, ignore_index=True)
+        daily["Date"] = pd.to_datetime(daily["date"], format="%d%b%Y", errors="coerce")
+        daily["dks_chf_govt_cip_3m_bps"] = -pd.to_numeric(daily["cip_govt"], errors="coerce")
+        daily = daily.dropna(subset=["Date", "dks_chf_govt_cip_3m_bps"])
+        daily = daily.sort_values("Date")
+        monthly = (
+            daily.assign(Date=daily["Date"].dt.to_period("M").dt.to_timestamp("M"))
+            .groupby("Date")["dks_chf_govt_cip_3m_bps"]
+            .last()
+            .sort_index()
+        )
+    else:
+        daily = pd.DataFrame(columns=["Date", "dks_chf_govt_cip_3m_bps"])
+        monthly = pd.Series(dtype="float64", name="dks_chf_govt_cip_3m_bps")
+
+    monthly = monthly[monthly.index >= pd.Timestamp(CONFIG["START_DATE"])].rename("dks_chf_govt_cip_3m_bps")
+    benchmark = monthly.to_frame()
+    benchmark["source_series"] = "Du-Keerati-Schreger cip_govt, CHF 3M, sign adjusted"
+    record = make_record(
+        "dks_chf_govt_cip_3m_bps",
+        "Du-Keerati-Schreger",
+        "cip_dataset_v4.csv: CHF 3m cip_govt, sign adjusted",
+        monthly,
+    )
+    return monthly, benchmark, record
 def percent_to_continuous_pa(series: pd.Series, name: str) -> pd.Series:
     """Converts percent p.a. to continuously compounded p.a."""
     monthly = series.copy()
@@ -246,10 +277,10 @@ def forward_implied_differential(spot: pd.Series, forward: pd.Series, tenor_year
     return (-np.log(forward / spot) / tenor_years).rename("forward_implied_usd_chf_diff")
 
 
-def build_outputs() -> tuple[pd.DataFrame, pd.DataFrame]:
+def build_outputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     diagnostics: list[SourceRecord] = []
 
-    spot, record = snb_json_series(CONFIG["SNB_FX_URL"], ["America - United States - USD 1", "America - United States â€“ USD 1"], "spot_chf_per_usd")
+    spot, record = snb_json_series(CONFIG["SNB_FX_URL"], ["America - United States - USD 1"], "spot_chf_per_usd")
     diagnostics.append(record)
     fwd3m, record = snb_json_series(CONFIG["SNB_FX_URL"], ["USD Forward rates - US Dollar 3-month forward rate (CHF per 1 USD)"], "forward_3m_chf_per_usd")
     diagnostics.append(record)
@@ -286,6 +317,9 @@ def build_outputs() -> tuple[pd.DataFrame, pd.DataFrame]:
     usd_gov_3m = percent_to_continuous_pa(usd_gov_3m_raw.resample("ME").last(), "usd_tbill_3m")
     chf_gov_3m = percent_to_continuous_pa(chf_gov_3m_raw, "chf_confederation_money_market_3m")
 
+    dks_chf_govt_cip_3m, benchmark_frame, record = dks_chf_govt_cip_monthly()
+    diagnostics.append(record)
+
     panel = pd.concat(
         [
             spot,
@@ -299,6 +333,7 @@ def build_outputs() -> tuple[pd.DataFrame, pd.DataFrame]:
             chf_libor_3m,
             usd_gov_3m,
             chf_gov_3m,
+            dks_chf_govt_cip_3m,
         ],
         axis=1,
     )
@@ -330,9 +365,12 @@ def build_outputs() -> tuple[pd.DataFrame, pd.DataFrame]:
         "cip_basis_sofr_saron_6m_bps",
         "cip_basis_libor_3m_bps",
         "cip_basis_government_3m_bps",
+        "dks_chf_govt_cip_3m_bps",
     ]
     diagnostics_frame = pd.DataFrame([record.__dict__ for record in diagnostics])
-    return panel[output_columns], diagnostics_frame
+    output_panel = panel[output_columns]
+    validation_frame = benchmark_validation(output_panel)
+    return output_panel, diagnostics_frame, benchmark_frame, validation_frame
 
 
 def drop_incomplete_current_month(panel: pd.DataFrame) -> pd.DataFrame:
@@ -343,29 +381,63 @@ def drop_incomplete_current_month(panel: pd.DataFrame) -> pd.DataFrame:
         return panel[panel.index < current_month_end]
     return panel
 
+def benchmark_validation(panel: pd.DataFrame) -> pd.DataFrame:
+    """Summarizes correlations with the external CHF 3M government-bond benchmark."""
+    benchmark = "dks_chf_govt_cip_3m_bps"
+    candidates = {
+        "government_rates_3m": "cip_basis_government_3m_bps",
+        "libor_3m": "cip_basis_libor_3m_bps",
+        "sofr_saron_3m": "cip_basis_sofr_saron_3m_bps",
+    }
+    windows = {
+        "full_overlap": (None, None),
+        "pre_2022_overlap": ("2008-01-01", "2021-12-31"),
+        "post_2015_pre_2022": ("2015-01-01", "2021-12-31"),
+    }
+    rows = []
+    for measure_name, measure in candidates.items():
+        for window_name, (start, end) in windows.items():
+            sample = panel[[measure, benchmark]].dropna()
+            if start is not None:
+                sample = sample.loc[pd.Timestamp(start) : pd.Timestamp(end)]
+            rows.append(
+                {
+                    "measure": measure_name,
+                    "benchmark": "Du-Keerati-Schreger CHF 3M government-bond CIP, sign adjusted",
+                    "window": window_name,
+                    "start": sample.index.min().date().isoformat() if not sample.empty else "",
+                    "end": sample.index.max().date().isoformat() if not sample.empty else "",
+                    "observations": int(len(sample)),
+                    "correlation": sample.iloc[:, 0].corr(sample.iloc[:, 1]) if len(sample) > 2 else np.nan,
+                }
+            )
+    return pd.DataFrame(rows)
+
 def plot_outputs(panel: pd.DataFrame) -> None:
     palette = set_custom_style()
-    plot_data = panel[
-        [
-            "cip_basis_sofr_saron_3m_bps",
-            "cip_basis_sofr_saron_6m_bps",
-            "cip_basis_libor_3m_bps",
-            "cip_basis_government_3m_bps",
-        ]
-    ].rename(
-        columns={
-            "cip_basis_sofr_saron_3m_bps": "SOFR-SARON (3M)",
-            "cip_basis_sofr_saron_6m_bps": "SOFR-SARON (6M)",
-            "cip_basis_libor_3m_bps": "LIBOR (3M)",
-            "cip_basis_government_3m_bps": "Government rates (3M)",
-        }
-    )
+    constructed_columns = {
+        "cip_basis_sofr_saron_3m_bps": "SOFR-SARON (3M)",
+        "cip_basis_sofr_saron_6m_bps": "SOFR-SARON (6M)",
+        "cip_basis_libor_3m_bps": "LIBOR (3M)",
+        "cip_basis_government_3m_bps": "Government rates (3M)",
+    }
+    benchmark_column = "dks_chf_govt_cip_3m_bps"
+    benchmark_label = "D-K-S govt bond (3M)"
 
     fig, ax = plt.subplots(figsize=(6, 4))
-    for idx, column in enumerate(plot_data.columns):
-        ax.plot(plot_data.index, plot_data[column], label=column, color=palette[idx], linewidth=1.25)
+    for idx, (column, label) in enumerate(constructed_columns.items()):
+        ax.plot(panel.index, panel[column], label=label, color=palette[idx], linewidth=1.2)
 
-    ax.axhline(0, color=palette[8], linestyle="--", linewidth=0.8)
+    ax.plot(
+        panel.index,
+        panel[benchmark_column],
+        label=benchmark_label,
+        color=palette[8],
+        linewidth=1.1,
+        linestyle="--",
+    )
+
+    ax.axhline(0, color=palette[8], linestyle=":", linewidth=0.8)
     ax.set_ylabel("Basis points")
     ax.set_xlabel(None)
     handles, labels = ax.get_legend_handles_labels()
@@ -374,7 +446,7 @@ def plot_outputs(panel: pd.DataFrame) -> None:
         handles,
         labels,
         loc="upper center",
-        bbox_to_anchor=(0.5, 0.905),
+        bbox_to_anchor=(0.5, 0.91),
         ncol=2,
         frameon=False,
         handlelength=2.2,
@@ -387,31 +459,37 @@ def plot_outputs(panel: pd.DataFrame) -> None:
     ax.tick_params(axis="x", which="minor", bottom=True)
 
     note = (
-        "Source: Author's calculations using Swiss National Bank and FRED data.\n"
-        "Note: CIP deviations are calculated from CHF per USD spot and forward rates and short-rate differentials. "
-        "Series are reported in annualized basis points."
+        "Source: Author's calculations using Swiss National Bank and FRED data; benchmark from Du, Keerati & Schreger.\n"
+        "Note: D-K-S government-bond CIP is sign-adjusted to match the USD-minus-CHF convention. "
+        "Series are annualized basis points."
     )
     fig.text(0.13, 0.055, note, ha="left", va="bottom", fontsize=5.5, color=palette[8], wrap=True)
-    plt.subplots_adjust(left=0.13, right=0.97, top=0.73, bottom=0.27)
+    plt.subplots_adjust(left=0.13, right=0.97, top=0.72, bottom=0.22)
 
     os.makedirs(os.path.dirname(CONFIG["CHART_OUTPUT_PATH"]), exist_ok=True)
     plt.savefig(CONFIG["CHART_OUTPUT_PATH"])
     plt.close(fig)
 
-
 def main() -> None:
     os.makedirs("data", exist_ok=True)
     os.makedirs("chart", exist_ok=True)
-    panel, diagnostics = build_outputs()
+    panel, diagnostics, benchmark, validation = build_outputs()
     panel.to_csv(CONFIG["DATA_OUTPUT_PATH"], index_label="Date")
     diagnostics.to_csv(CONFIG["DIAGNOSTICS_OUTPUT_PATH"], index=False)
+    benchmark.to_csv(CONFIG["BENCHMARK_OUTPUT_PATH"], index_label="Date")
+    validation.to_csv(CONFIG["VALIDATION_OUTPUT_PATH"], index=False)
     plot_outputs(panel)
     print(f"Saved monthly data to {CONFIG['DATA_OUTPUT_PATH']}")
     print(f"Saved diagnostics to {CONFIG['DIAGNOSTICS_OUTPUT_PATH']}")
+    print(f"Saved benchmark to {CONFIG['BENCHMARK_OUTPUT_PATH']}")
+    print(f"Saved validation to {CONFIG['VALIDATION_OUTPUT_PATH']}")
     print(f"Saved chart to {CONFIG['CHART_OUTPUT_PATH']}")
     print(f"Latest observation: {panel.dropna(how='all').index.max().date()}")
 
 
 if __name__ == "__main__":
     main()
+
+
+
 

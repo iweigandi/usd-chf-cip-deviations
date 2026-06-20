@@ -9,3 +9,4 @@ usd_libor_3m_percent,SNB,United States - USD - USD LIBOR - 3-month,1990-01-31,20
 chf_libor_3m_percent,SNB,Switzerland - CHF - CHF LIBOR - 3-month,1990-01-31,2021-12-31,384,ok
 usd_tbill_3m_percent,FRED,TB3MS,1990-01-01,2026-05-01,437,ok
 chf_confederation_money_market_3m_percent,SNB,Switzerland - CHF - Money market debt register claims of the Swiss Confederation - 3-month,1992-01-31,2026-05-31,407,ok
+dks_chf_govt_cip_3m_bps,Du-Keerati-Schreger,"cip_dataset_v4.csv: CHF 3m cip_govt, sign adjusted",2000-01-31,2025-06-30,306,ok

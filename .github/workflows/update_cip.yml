@@ -1,4 +1,4 @@
-﻿name: Update USD/CHF CIP Data and Chart
+name: Update USD/CHF CIP Data and Chart
 
 on:
   workflow_dispatch:
@@ -51,6 +51,8 @@ jobs:
           git add -A \
             data/usd_chf_cip_deviations_monthly.csv \
             data/source_diagnostics.csv \
+            data/du_keerati_schreger_chf_cip_monthly.csv \
+            data/benchmark_validation.csv \
             chart/usd_chf_cip_deviations.png \
             Methodology.pdf
           if git diff --cached --quiet; then

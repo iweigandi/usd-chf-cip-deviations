@@ -1,4 +1,4 @@
-﻿\documentclass[12pt,a4paper]{article}
+\documentclass[12pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath}
 \usepackage{graphicx}
@@ -23,7 +23,7 @@
 \maketitle
 
 \begin{abstract}
-\noindent This note describes the construction of monthly covered interest parity (CIP) deviation measures for the USD/CHF pair. The series combine spot and forward exchange rates with short-term USD and CHF interest-rate benchmarks. The resulting measures distinguish between risk-free-rate benchmarks based on SOFR and SARON, legacy LIBOR benchmarks, and government money-market rate proxies.
+\noindent This note describes the construction of monthly covered interest parity (CIP) deviation measures for the USD/CHF pair. The series combine spot and forward exchange rates with short-term USD and CHF interest-rate benchmarks. The dataset also reports an external CHF government-bond CIP benchmark from \citet{DuKeeratiSchreger2025}, sign-adjusted to match the convention used here.
 \end{abstract}
 
 \section{Definition}
@@ -44,13 +44,15 @@ The published series report \(10000 \times b_t^{(T)}\), so values are annualized
 
 The exchange-rate data are from the Swiss National Bank and include USD/CHF spot, three-month forward, and six-month forward rates. The modern risk-free-rate measures use SOFR from FRED and SARON compound rates from the Swiss National Bank. The legacy measure uses USD and CHF LIBOR series. A government-rate proxy combines the US Treasury bill rate from FRED with the Swiss Confederation money-market series from the Swiss National Bank.
 
-\section{Series}
+The external benchmark is the CHF three-month government-bond CIP series from \citet{DuKeeratiSchreger2025}. Their convention is reversed relative to the USD-minus-CHF definition above, so the series is multiplied by \(-1\) before being included in the dataset. The benchmark is useful for comparison, but it is not mechanically identical to the short-rate proxy because it is based on government-bond yield inputs.
 
-The public dataset contains four main basis measures: three-month SOFR-SARON, six-month SOFR-SARON, three-month LIBOR, and a three-month government-rate proxy. These are related but distinct measures and should not be treated as interchangeable. They reflect different benchmark markets and, for the legacy LIBOR series, a different institutional environment.
+\section{Series and Benchmarking}
+
+The public dataset contains four constructed basis measures: three-month SOFR-SARON, six-month SOFR-SARON, three-month LIBOR, and a three-month government-rate proxy. These are related but distinct measures and should not be treated as interchangeable. The file \texttt{benchmark\_validation.csv} reports correlations between the constructed series and the external government-bond benchmark over several overlapping windows.
 
 \section{Chart}
 
-Figure~\ref{fig:cip} plots the monthly basis measures in basis points.
+Figure~\ref{fig:cip} plots the monthly basis measures in basis points, together with the sign-adjusted external benchmark.
 
 \begin{figure}[H]
     \centering
@@ -61,11 +63,11 @@ Figure~\ref{fig:cip} plots the monthly basis measures in basis points.
 
 \section{Replication}
 
-The replication script downloads public data from the Swiss National Bank and FRED, computes the series, writes source diagnostics, and regenerates the chart. Source diagnostics are included to make the sample coverage of each input series transparent.
+The replication script downloads public data from the Swiss National Bank, FRED, and the Du-Keerati-Schreger government-bond CIP dataset, computes the series, writes source diagnostics and benchmark correlations, and regenerates the chart.
 
 \begin{thebibliography}{9}
-\bibitem[Miranda-Agrippino and Rey(2020)]{MirandaRey2020}
-Miranda-Agrippino, S., \& Rey, H. (2020). US monetary policy and the global financial cycle. \textit{The Review of Economic Studies}, 87(6), 2754--2776.
+\bibitem[Du, Keerati, and Schreger(2025)]{DuKeeratiSchreger2025}
+Du, W., Keerati, R., \& Schreger, J. (2025). \textit{Decoupling Dollar and Treasury Privilege}. Prepared for the 2025 IMF Annual Research Conference.
 \end{thebibliography}
 
 \end{document}
