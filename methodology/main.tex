@@ -44,11 +44,11 @@ The published series report \(10000 \times b_t^{(T)}\), so values are annualized
 
 The exchange-rate data are from the Swiss National Bank and include USD/CHF spot, three-month forward, and six-month forward rates. The modern risk-free-rate measures use SOFR from FRED and SARON compound rates from the Swiss National Bank. The legacy measure uses USD and CHF LIBOR series. A government-rate proxy combines the US Treasury bill rate from FRED with the Swiss Confederation money-market series from the Swiss National Bank.
 
-The external benchmark is the CHF three-month government-bond CIP series from \citet{DuKeeratiSchreger2025}. Their convention is reversed relative to the USD-minus-CHF definition above, so the series is multiplied by \(-1\) before being included in the dataset. The benchmark is useful for comparison, but it is not mechanically identical to the short-rate proxy because it is based on government-bond yield inputs.
+The external benchmark is the CHF three-month government-bond CIP series from \citet{DuKeeratiSchreger2025}, which extends the government-bond CIP datasets used in \citet{DuSchreger2016} and \citet{DuImSchreger2018}. In that dataset, \texttt{cip\_govt} is defined as the foreign government yield minus the market-implied forward premium minus the matched U.S. Treasury yield. For the three-month tenor, the forward premium is based on the outright forward and spot exchange rates quoted in units of foreign currency per U.S. dollar. This convention is reversed relative to the USD-minus-CHF definition above, so the benchmark is multiplied by \(-1\) before being plotted with the series constructed here. The benchmark is useful for comparison, but it is not mechanically identical to the short-rate proxy because it is based on government-bond yield inputs and therefore also reflects convenience-yield, sovereign-risk, and market-segmentation components.
 
 \section{Series and Benchmarking}
 
-The public dataset contains four constructed basis measures: three-month SOFR-SARON, six-month SOFR-SARON, three-month LIBOR, and a three-month government-rate proxy. These are related but distinct measures and should not be treated as interchangeable. The file \texttt{benchmark\_validation.csv} reports correlations between the constructed series and the external government-bond benchmark over several overlapping windows.
+The public dataset contains four constructed short-rate basis measures. These are the three-month SOFR-SARON basis, the six-month SOFR-SARON basis, the three-month LIBOR basis, and a three-month government-rate proxy. They are related but distinct measures and should not be treated as interchangeable. As emphasized by \citet{DuTepperVerdelhan2018}, CIP deviations differ across benchmark markets and reflect the interaction of funding, hedging, and balance-sheet constraints. The accompanying validation table reports correlations between the constructed series and the external government-bond benchmark over several overlapping windows.
 
 \section{Chart}
 
@@ -66,8 +66,23 @@ Figure~\ref{fig:cip} plots the monthly basis measures in basis points, together 
 The replication script downloads public data from the Swiss National Bank, FRED, and the Du-Keerati-Schreger government-bond CIP dataset, computes the series, writes source diagnostics and benchmark correlations, and regenerates the chart.
 
 \begin{thebibliography}{9}
+\bibitem[Akram, Rime, and Sarno(2008)]{AkramRimeSarno2008}
+Akram, Q. F., Rime, D., \& Sarno, L. (2008). Arbitrage in the foreign exchange market: Turning on the microscope. \textit{Journal of International Economics}, 76(2), 237--253.
+
+\bibitem[Borio et al.(2016)]{BorioEtAl2016}
+Borio, C., McCauley, R. N., McGuire, P., \& Sushko, V. (2016). Covered interest parity lost: Understanding the cross-currency basis. \textit{BIS Quarterly Review}, September, 45--64.
+
 \bibitem[Du, Keerati, and Schreger(2025)]{DuKeeratiSchreger2025}
 Du, W., Keerati, R., \& Schreger, J. (2025). \textit{Decoupling Dollar and Treasury Privilege}. Prepared for the 2025 IMF Annual Research Conference.
+
+\bibitem[Du, Im, and Schreger(2018)]{DuImSchreger2018}
+Du, W., Im, J., \& Schreger, J. (2018). The U.S. Treasury premium. \textit{Journal of International Economics}, 112, 167--181.
+
+\bibitem[Du and Schreger(2016)]{DuSchreger2016}
+Du, W., \& Schreger, J. (2016). Local currency sovereign risk. \textit{Journal of Finance}, 71(3), 1027--1070.
+
+\bibitem[Du, Tepper, and Verdelhan(2018)]{DuTepperVerdelhan2018}
+Du, W., Tepper, A., \& Verdelhan, A. (2018). Deviations from covered interest rate parity. \textit{Journal of Finance}, 73(3), 915--957.
 \end{thebibliography}
 
 \end{document}

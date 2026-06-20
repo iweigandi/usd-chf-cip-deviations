@@ -4,7 +4,7 @@
 
 This repository provides monthly estimates of covered interest parity (CIP) deviations for the USD/CHF pair. The measures are constructed from spot and forward exchange rates together with short-term USD and CHF interest-rate benchmarks. The series distinguish between risk-free-rate measures based on SOFR and SARON, legacy LIBOR-based measures, and government money-market rate proxies.
 
-The dataset also includes a CHF three-month government-bond CIP benchmark from Du, Keerati, and Schreger. The benchmark is sign-adjusted so that it follows the same USD-minus-CHF convention as the series constructed here. Because the benchmark is based on government-bond yields rather than the short-rate proxies used in this repository, it should be interpreted as an external comparison rather than a mechanically identical target series.
+The dataset also includes a CHF three-month government-bond CIP benchmark from Du, Keerati, and Schreger. Their `cip_govt` variable is defined as the foreign government yield minus the market-implied forward premium minus the matched US Treasury yield. The benchmark is sign-adjusted so that it follows the same USD-minus-CHF convention as the series constructed here. Because it is based on government-bond yields rather than the short-rate proxies used in this repository, it should be interpreted as an external comparison rather than a mechanically identical target series.
 
 ---
 
@@ -53,7 +53,7 @@ The output series are annualized and reported in basis points. The repository cu
 
 * Swiss National Bank: USD/CHF spot and forward rates; CHF SARON compound rates; CHF money-market and legacy LIBOR rates.
 * FRED: SOFR index and US Treasury bill rate.
-* Du, Keerati, and Schreger: government-bond CIP dataset, version 4.
+* Du, Keerati, and Schreger: government-bond CIP dataset, version 4. Relevant references include Du and Schreger (2016), Du, Im, and Schreger (2018), Du, Tepper, and Verdelhan (2018), and Du, Keerati, and Schreger (2025).
 
 ---
 

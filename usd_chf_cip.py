@@ -221,11 +221,11 @@ def make_record(name: str, source: str, source_id: str, series: pd.Series) -> So
 def dks_chf_govt_cip_monthly() -> tuple[pd.Series, pd.DataFrame, SourceRecord]:
     """Loads the published CHF 3M government-bond CIP benchmark.
 
-    Du, Keerati, and Schreger report the basis as foreign government yield minus
-    the hedged forward premium minus the US Treasury yield. The sign is reversed
-    here to match this repository's USD-minus-CHF convention.
+    Du, Keerati, and Schreger define cip_govt as the foreign government
+    yield minus the forward premium minus the matched US Treasury yield. The
+    sign-adjusted series matches this repository's USD-minus-CHF convention.
     """
-    columns = ["currency", "tenor", "date", "cip_govt"]
+    columns = ["currency", "tenor", "date", "diff_y", "rho", "cip_govt"]
     chunks: list[pd.DataFrame] = []
     for chunk in pd.read_csv(CONFIG["DKS_CIP_URL"], usecols=columns, chunksize=250_000):
         subset = chunk[chunk["currency"].eq("CHF") & chunk["tenor"].eq("3m")].copy()
@@ -235,22 +235,36 @@ def dks_chf_govt_cip_monthly() -> tuple[pd.Series, pd.DataFrame, SourceRecord]:
     if chunks:
         daily = pd.concat(chunks, ignore_index=True)
         daily["Date"] = pd.to_datetime(daily["date"], format="%d%b%Y", errors="coerce")
-        daily["dks_chf_govt_cip_3m_bps"] = -pd.to_numeric(daily["cip_govt"], errors="coerce")
+        daily["dks_diff_y_pct"] = pd.to_numeric(daily["diff_y"], errors="coerce")
+        daily["dks_rho_pct"] = pd.to_numeric(daily["rho"], errors="coerce")
+        daily["dks_cip_govt_original_bps"] = pd.to_numeric(daily["cip_govt"], errors="coerce")
+        daily["dks_chf_govt_cip_3m_bps"] = -daily["dks_cip_govt_original_bps"]
         daily = daily.dropna(subset=["Date", "dks_chf_govt_cip_3m_bps"])
         daily = daily.sort_values("Date")
-        monthly = (
+        benchmark = (
             daily.assign(Date=daily["Date"].dt.to_period("M").dt.to_timestamp("M"))
-            .groupby("Date")["dks_chf_govt_cip_3m_bps"]
+            .groupby("Date")[[
+                "dks_diff_y_pct",
+                "dks_rho_pct",
+                "dks_cip_govt_original_bps",
+                "dks_chf_govt_cip_3m_bps",
+            ]]
             .last()
             .sort_index()
         )
     else:
-        daily = pd.DataFrame(columns=["Date", "dks_chf_govt_cip_3m_bps"])
-        monthly = pd.Series(dtype="float64", name="dks_chf_govt_cip_3m_bps")
+        benchmark = pd.DataFrame(
+            columns=[
+                "dks_diff_y_pct",
+                "dks_rho_pct",
+                "dks_cip_govt_original_bps",
+                "dks_chf_govt_cip_3m_bps",
+            ]
+        )
 
-    monthly = monthly[monthly.index >= pd.Timestamp(CONFIG["START_DATE"])].rename("dks_chf_govt_cip_3m_bps")
-    benchmark = monthly.to_frame()
-    benchmark["source_series"] = "Du-Keerati-Schreger cip_govt, CHF 3M, sign adjusted"
+    benchmark = benchmark[benchmark.index >= pd.Timestamp(CONFIG["START_DATE"])].copy()
+    monthly = benchmark["dks_chf_govt_cip_3m_bps"].rename("dks_chf_govt_cip_3m_bps")
+    benchmark["source_series"] = "Du-Keerati-Schreger cip_govt, CHF 3M"
     record = make_record(
         "dks_chf_govt_cip_3m_bps",
         "Du-Keerati-Schreger",
@@ -258,6 +272,7 @@ def dks_chf_govt_cip_monthly() -> tuple[pd.Series, pd.DataFrame, SourceRecord]:
         monthly,
     )
     return monthly, benchmark, record
+
 def percent_to_continuous_pa(series: pd.Series, name: str) -> pd.Series:
     """Converts percent p.a. to continuously compounded p.a."""
     monthly = series.copy()
