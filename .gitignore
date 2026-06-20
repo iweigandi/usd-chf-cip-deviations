@@ -1,0 +1,9 @@
+__pycache__/
+_methodology_build*/
+methodology/*.aux
+methodology/*.fdb_latexmk
+methodology/*.fls
+methodology/*.log
+methodology/*.out
+methodology/*.synctex.gz
+methodology/main.pdf
