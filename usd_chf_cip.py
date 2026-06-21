@@ -31,6 +31,8 @@ CONFIG = {
     "DATA_OUTPUT_PATH": "data/usd_chf_cip_deviations_monthly.csv",
     "DIAGNOSTICS_OUTPUT_PATH": "data/source_diagnostics.csv",
     "CHART_OUTPUT_PATH": "chart/usd_chf_cip_deviations.png",
+    "CHART_DKS_START_OUTPUT_PATH": "chart/usd_chf_cip_deviations_from_dks_start.png",
+    "CHART_OURS_START_QUARTER_OUTPUT_PATH": "chart/usd_chf_cip_deviations_from_ours_start_quarter_lines.png",
     "BENCHMARK_OUTPUT_PATH": "data/du_keerati_schreger_chf_cip_monthly.csv",
     "VALIDATION_OUTPUT_PATH": "data/benchmark_validation.csv",
     "DKS_CIP_URL": "https://jschreger.s3.us-east-2.amazonaws.com/cip_dataset_v4.csv",
@@ -428,8 +430,14 @@ def benchmark_validation(panel: pd.DataFrame) -> pd.DataFrame:
             )
     return pd.DataFrame(rows)
 
-def plot_outputs(panel: pd.DataFrame) -> None:
+def plot_outputs(
+    panel: pd.DataFrame,
+    output_path: str | None = None,
+    start_mode: str = "full",
+    quarter_lines: bool = False,
+) -> None:
     palette = set_custom_style()
+    output_path = output_path or CONFIG["CHART_OUTPUT_PATH"]
     constructed_columns = {
         "cip_basis_sofr_saron_3m_bps": "SOFR-SARON (3M)",
         "cip_basis_sofr_saron_6m_bps": "SOFR-SARON (6M)",
@@ -438,6 +446,18 @@ def plot_outputs(panel: pd.DataFrame) -> None:
     }
     benchmark_column = "dks_chf_govt_cip_3m_bps"
     benchmark_label = "D-K-S govt bond (3M)"
+    plot_columns = list(constructed_columns.keys()) + [benchmark_column]
+    visible_data = panel[plot_columns].dropna(how="all")
+
+    if start_mode == "dks":
+        visible_start = panel[benchmark_column].first_valid_index()
+    elif start_mode == "ours":
+        visible_start = panel[list(constructed_columns.keys())].dropna(how="all").index.min()
+    elif start_mode == "full":
+        visible_start = visible_data.index.min()
+    else:
+        raise ValueError(f"Unknown start_mode: {start_mode}")
+    visible_end = visible_data.index.max()
 
     fig, ax = plt.subplots(figsize=(6, 4))
     for idx, (column, label) in enumerate(constructed_columns.items()):
@@ -452,8 +472,13 @@ def plot_outputs(panel: pd.DataFrame) -> None:
         linestyle="--",
     )
 
+    if quarter_lines:
+        quarter_ends = pd.date_range(visible_start, visible_end, freq="QE")
+        for quarter_end in quarter_ends:
+            ax.axvline(quarter_end, color=palette[8], linewidth=0.18, alpha=0.055, zorder=0)
 
     ax.axhline(0, color=palette[8], linestyle=":", linewidth=0.8)
+    ax.set_xlim(visible_start, visible_end)
     ax.set_ylabel("Basis points")
     ax.set_xlabel(None)
     handles, labels = ax.get_legend_handles_labels()
@@ -483,8 +508,8 @@ def plot_outputs(panel: pd.DataFrame) -> None:
     fig.text(0.13, 0.095, note, ha="left", va="bottom", fontsize=5.5, color=palette[8], wrap=True)
     plt.subplots_adjust(left=0.13, right=0.97, top=0.90, bottom=0.25)
 
-    os.makedirs(os.path.dirname(CONFIG["CHART_OUTPUT_PATH"]), exist_ok=True)
-    plt.savefig(CONFIG["CHART_OUTPUT_PATH"])
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    plt.savefig(output_path)
     plt.close(fig)
 
 def main() -> None:
@@ -496,6 +521,8 @@ def main() -> None:
     benchmark.to_csv(CONFIG["BENCHMARK_OUTPUT_PATH"], index_label="Date")
     validation.to_csv(CONFIG["VALIDATION_OUTPUT_PATH"], index=False)
     plot_outputs(panel)
+    plot_outputs(panel, CONFIG["CHART_DKS_START_OUTPUT_PATH"], start_mode="dks")
+    plot_outputs(panel, CONFIG["CHART_OURS_START_QUARTER_OUTPUT_PATH"], start_mode="ours", quarter_lines=True)
     print(f"Saved monthly data to {CONFIG['DATA_OUTPUT_PATH']}")
     print(f"Saved diagnostics to {CONFIG['DIAGNOSTICS_OUTPUT_PATH']}")
     print(f"Saved benchmark to {CONFIG['BENCHMARK_OUTPUT_PATH']}")

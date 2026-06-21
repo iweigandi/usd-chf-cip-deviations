@@ -54,6 +54,8 @@ jobs:
             data/du_keerati_schreger_chf_cip_monthly.csv \
             data/benchmark_validation.csv \
             chart/usd_chf_cip_deviations.png \
+            chart/usd_chf_cip_deviations_from_dks_start.png \
+            chart/usd_chf_cip_deviations_from_ours_start_quarter_lines.png \
             Methodology.pdf
           if git diff --cached --quiet; then
             echo "No output changes to commit."
