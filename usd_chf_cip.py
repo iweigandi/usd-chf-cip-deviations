@@ -452,6 +452,7 @@ def plot_outputs(panel: pd.DataFrame) -> None:
         linestyle="--",
     )
 
+
     ax.axhline(0, color=palette[8], linestyle=":", linewidth=0.8)
     ax.set_ylabel("Basis points")
     ax.set_xlabel(None)
