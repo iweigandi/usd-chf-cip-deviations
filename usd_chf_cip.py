@@ -321,7 +321,7 @@ def build_outputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFr
     usd_libor_3m = percent_to_continuous_pa(usd_libor_3m_raw, "usd_libor_3m")
     chf_libor_3m = percent_to_continuous_pa(chf_libor_3m_raw, "chf_libor_3m")
 
-    usd_gov_3m_raw, record = fred_csv("TB3MS", "usd_tbill_3m_percent", CONFIG["START_DATE"])
+    usd_gov_3m_raw, record = fred_csv("DGS3MO", "usd_treasury_3m_percent", CONFIG["START_DATE"])
     diagnostics.append(record)
     chf_gov_3m_raw, record = snb_json_series(
         CONFIG["SNB_RATES_URL"],
@@ -329,7 +329,7 @@ def build_outputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFr
         "chf_confederation_money_market_3m_percent",
     )
     diagnostics.append(record)
-    usd_gov_3m = percent_to_continuous_pa(usd_gov_3m_raw.resample("ME").last(), "usd_tbill_3m")
+    usd_gov_3m = percent_to_continuous_pa(usd_gov_3m_raw.resample("ME").last(), "usd_treasury_3m")
     chf_gov_3m = percent_to_continuous_pa(chf_gov_3m_raw, "chf_confederation_money_market_3m")
 
     dks_chf_govt_cip_3m, benchmark_frame, record = dks_chf_govt_cip_monthly()
@@ -358,7 +358,7 @@ def build_outputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFr
     panel["cip_basis_sofr_saron_3m_bps"] = 10000.0 * ((panel["usd_sofr_3m"] - panel["chf_saron_3m"]) - panel["forward_implied_usd_chf_3m"])
     panel["cip_basis_sofr_saron_6m_bps"] = 10000.0 * ((panel["usd_sofr_6m"] - panel["chf_saron_6m"]) - panel["forward_implied_usd_chf_6m"])
     panel["cip_basis_libor_3m_bps"] = 10000.0 * ((panel["usd_libor_3m"] - panel["chf_libor_3m"]) - panel["forward_implied_usd_chf_3m"])
-    panel["cip_basis_government_3m_bps"] = 10000.0 * ((panel["usd_tbill_3m"] - panel["chf_confederation_money_market_3m"]) - panel["forward_implied_usd_chf_3m"])
+    panel["cip_basis_government_3m_bps"] = 10000.0 * ((panel["usd_treasury_3m"] - panel["chf_confederation_money_market_3m"]) - panel["forward_implied_usd_chf_3m"])
 
     panel = drop_incomplete_current_month(panel)
 
@@ -374,7 +374,7 @@ def build_outputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFr
         "chf_saron_6m",
         "usd_libor_3m",
         "chf_libor_3m",
-        "usd_tbill_3m",
+        "usd_treasury_3m",
         "chf_confederation_money_market_3m",
         "cip_basis_sofr_saron_3m_bps",
         "cip_basis_sofr_saron_6m_bps",
@@ -461,7 +461,7 @@ def plot_outputs(panel: pd.DataFrame) -> None:
         handles,
         labels,
         loc="lower left",
-        ncol=2,
+        ncol=1,
         frameon=False,
         fontsize=7,
         handlelength=2.0,

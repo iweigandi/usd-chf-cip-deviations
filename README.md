@@ -52,7 +52,7 @@ The output series are annualized and reported in basis points. The repository cu
 ### Sources
 
 * Swiss National Bank: USD/CHF spot and forward rates; CHF SARON compound rates; CHF money-market and legacy LIBOR rates.
-* FRED: SOFR index and US Treasury bill rate.
+* FRED: SOFR index and 3-month US Treasury constant-maturity yield.
 * Du, Keerati, and Schreger: government-bond CIP dataset, version 4. Relevant references include Du and Schreger (2016), Du, Im, and Schreger (2018), Du, Tepper, and Verdelhan (2018), and Du, Keerati, and Schreger (2025).
 
 ---

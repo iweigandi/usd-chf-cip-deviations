@@ -1,7 +1,7 @@
 measure,benchmark,window,start,end,observations,correlation
-government_rates_3m,"Du-Keerati-Schreger CHF 3M government-bond CIP, sign adjusted",full_overlap,2008-01-31,2025-06-30,210,0.21221942540967823
-government_rates_3m,"Du-Keerati-Schreger CHF 3M government-bond CIP, sign adjusted",pre_2022_overlap,2008-01-31,2021-12-31,168,0.32977227683705657
-government_rates_3m,"Du-Keerati-Schreger CHF 3M government-bond CIP, sign adjusted",post_2015_pre_2022,2015-01-31,2021-12-31,84,0.6106645664260009
+government_rates_3m,"Du-Keerati-Schreger CHF 3M government-bond CIP, sign adjusted",full_overlap,2008-01-31,2025-06-30,210,0.385421702440734
+government_rates_3m,"Du-Keerati-Schreger CHF 3M government-bond CIP, sign adjusted",pre_2022_overlap,2008-01-31,2021-12-31,168,0.39772946699025263
+government_rates_3m,"Du-Keerati-Schreger CHF 3M government-bond CIP, sign adjusted",post_2015_pre_2022,2015-01-31,2021-12-31,84,0.5934466206121238
 libor_3m,"Du-Keerati-Schreger CHF 3M government-bond CIP, sign adjusted",full_overlap,2008-01-31,2021-12-31,168,0.33029253670062064
 libor_3m,"Du-Keerati-Schreger CHF 3M government-bond CIP, sign adjusted",pre_2022_overlap,2008-01-31,2021-12-31,168,0.33029253670062064
 libor_3m,"Du-Keerati-Schreger CHF 3M government-bond CIP, sign adjusted",post_2015_pre_2022,2015-01-31,2021-12-31,84,0.5792789018949622
