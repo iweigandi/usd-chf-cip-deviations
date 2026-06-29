@@ -3,7 +3,7 @@ name: Update USD/CHF CIP Data and Chart
 on:
   workflow_dispatch:
   schedule:
-    - cron: '15 8 * * 1' # Runs at 8:15 AM UTC every Monday
+    - cron: '15 8 1 * *' # Runs at 8:15 AM UTC on the first day of each month
 
 permissions:
   contents: write
@@ -50,13 +50,12 @@ jobs:
           git config user.email "actions@github.com"
           git add -A \
             data/usd_chf_cip_deviations_monthly.csv \
-            data/source_diagnostics.csv \
-            data/du_keerati_schreger_chf_cip_monthly.csv \
-            data/benchmark_validation.csv \
             chart/usd_chf_cip_deviations.png \
-            chart/usd_chf_cip_deviations_from_dks_start.png \
-            chart/usd_chf_cip_deviations_from_ours_start_quarter_lines.png \
-            Methodology.pdf
+            Methodology.pdf \
+            README.md \
+            methodology/main.tex \
+            usd_chf_cip.py \
+            requirements.txt
           if git diff --cached --quiet; then
             echo "No output changes to commit."
           else

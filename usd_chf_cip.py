@@ -3,8 +3,8 @@
 usd_chf_cip.py
 
 Builds monthly USD/CHF covered interest parity (CIP) deviation measures from
-public SNB and FRED data, then saves data, diagnostics, and a publication-style
-chart.
+public SNB and FRED data, then saves the estimated deviations and a
+publication-style chart.
 """
 
 from __future__ import annotations
@@ -29,12 +29,7 @@ CONFIG = {
     "SNB_RATES_URL": "https://data.snb.ch/api/cube/zimoma/data/json/en",
     "SNB_SARON_URL": "https://data.snb.ch/api/cube/zirepo/data/json/en",
     "DATA_OUTPUT_PATH": "data/usd_chf_cip_deviations_monthly.csv",
-    "DIAGNOSTICS_OUTPUT_PATH": "data/source_diagnostics.csv",
     "CHART_OUTPUT_PATH": "chart/usd_chf_cip_deviations.png",
-    "CHART_DKS_START_OUTPUT_PATH": "chart/usd_chf_cip_deviations_from_dks_start.png",
-    "CHART_OURS_START_QUARTER_OUTPUT_PATH": "chart/usd_chf_cip_deviations_from_ours_start_quarter_lines.png",
-    "BENCHMARK_OUTPUT_PATH": "data/du_keerati_schreger_chf_cip_monthly.csv",
-    "VALIDATION_OUTPUT_PATH": "data/benchmark_validation.csv",
     "DKS_CIP_URL": "https://jschreger.s3.us-east-2.amazonaws.com/cip_dataset_v4.csv",
     "DOWNLOAD_TIMEOUT_SECONDS": 30,
 }
@@ -294,7 +289,7 @@ def forward_implied_differential(spot: pd.Series, forward: pd.Series, tenor_year
     return (-np.log(forward / spot) / tenor_years).rename("forward_implied_usd_chf_diff")
 
 
-def build_outputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def build_outputs() -> tuple[pd.DataFrame, pd.DataFrame]:
     diagnostics: list[SourceRecord] = []
 
     spot, record = snb_json_series(CONFIG["SNB_FX_URL"], ["America - United States - USD 1"], "spot_chf_per_usd")
@@ -365,30 +360,12 @@ def build_outputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFr
     panel = drop_incomplete_current_month(panel)
 
     output_columns = [
-        "spot_chf_per_usd",
-        "forward_3m_chf_per_usd",
-        "forward_6m_chf_per_usd",
-        "forward_implied_usd_chf_3m",
-        "forward_implied_usd_chf_6m",
-        "usd_sofr_3m",
-        "chf_saron_3m",
-        "usd_sofr_6m",
-        "chf_saron_6m",
-        "usd_libor_3m",
-        "chf_libor_3m",
-        "usd_treasury_3m",
-        "chf_confederation_money_market_3m",
         "cip_basis_sofr_saron_3m_bps",
         "cip_basis_sofr_saron_6m_bps",
         "cip_basis_libor_3m_bps",
         "cip_basis_government_3m_bps",
-        "dks_chf_govt_cip_3m_bps",
     ]
-    diagnostics_frame = pd.DataFrame([record.__dict__ for record in diagnostics])
-    output_panel = panel[output_columns]
-    validation_frame = benchmark_validation(output_panel)
-    return output_panel, diagnostics_frame, benchmark_frame, validation_frame
-
+    return panel[output_columns], panel
 
 def drop_incomplete_current_month(panel: pd.DataFrame) -> pd.DataFrame:
     """Drops the current month-end label until the month has actually closed."""
@@ -398,46 +375,8 @@ def drop_incomplete_current_month(panel: pd.DataFrame) -> pd.DataFrame:
         return panel[panel.index < current_month_end]
     return panel
 
-def benchmark_validation(panel: pd.DataFrame) -> pd.DataFrame:
-    """Summarizes correlations with the external CHF 3M government-bond benchmark."""
-    benchmark = "dks_chf_govt_cip_3m_bps"
-    candidates = {
-        "government_rates_3m": "cip_basis_government_3m_bps",
-        "libor_3m": "cip_basis_libor_3m_bps",
-        "sofr_saron_3m": "cip_basis_sofr_saron_3m_bps",
-    }
-    windows = {
-        "full_overlap": (None, None),
-        "pre_2022_overlap": ("2008-01-01", "2021-12-31"),
-        "post_2015_pre_2022": ("2015-01-01", "2021-12-31"),
-    }
-    rows = []
-    for measure_name, measure in candidates.items():
-        for window_name, (start, end) in windows.items():
-            sample = panel[[measure, benchmark]].dropna()
-            if start is not None:
-                sample = sample.loc[pd.Timestamp(start) : pd.Timestamp(end)]
-            rows.append(
-                {
-                    "measure": measure_name,
-                    "benchmark": "Du-Keerati-Schreger CHF 3M government-bond CIP, sign adjusted",
-                    "window": window_name,
-                    "start": sample.index.min().date().isoformat() if not sample.empty else "",
-                    "end": sample.index.max().date().isoformat() if not sample.empty else "",
-                    "observations": int(len(sample)),
-                    "correlation": sample.iloc[:, 0].corr(sample.iloc[:, 1]) if len(sample) > 2 else np.nan,
-                }
-            )
-    return pd.DataFrame(rows)
-
-def plot_outputs(
-    panel: pd.DataFrame,
-    output_path: str | None = None,
-    start_mode: str = "full",
-    quarter_lines: bool = False,
-) -> None:
+def plot_outputs(panel: pd.DataFrame) -> None:
     palette = set_custom_style()
-    output_path = output_path or CONFIG["CHART_OUTPUT_PATH"]
     constructed_columns = {
         "cip_basis_sofr_saron_3m_bps": "SOFR-SARON (3M)",
         "cip_basis_sofr_saron_6m_bps": "SOFR-SARON (6M)",
@@ -448,15 +387,7 @@ def plot_outputs(
     benchmark_label = "D-K-S govt bond (3M)"
     plot_columns = list(constructed_columns.keys()) + [benchmark_column]
     visible_data = panel[plot_columns].dropna(how="all")
-
-    if start_mode == "dks":
-        visible_start = panel[benchmark_column].first_valid_index()
-    elif start_mode == "ours":
-        visible_start = panel[list(constructed_columns.keys())].dropna(how="all").index.min()
-    elif start_mode == "full":
-        visible_start = visible_data.index.min()
-    else:
-        raise ValueError(f"Unknown start_mode: {start_mode}")
+    visible_start = visible_data.index.min()
     visible_end = visible_data.index.max()
 
     fig, ax = plt.subplots(figsize=(6, 4))
@@ -471,11 +402,6 @@ def plot_outputs(
         linewidth=1.1,
         linestyle="--",
     )
-
-    if quarter_lines:
-        quarter_ends = pd.date_range(visible_start, visible_end, freq="QE")
-        for quarter_end in quarter_ends:
-            ax.axvline(quarter_end, color=palette[8], linewidth=0.18, alpha=0.055, zorder=0)
 
     ax.axhline(0, color=palette[8], linestyle=":", linewidth=0.8)
     ax.set_xlim(visible_start, visible_end)
@@ -500,36 +426,22 @@ def plot_outputs(
     plt.setp(ax.get_xticklabels(), rotation=0, ha="center")
     ax.tick_params(axis="x", which="minor", bottom=True)
 
-    note = (
-        "Source: Author's calculations using Swiss National Bank and FRED data; benchmark from Du, Keerati & Schreger.\n"
-        "Note: D-K-S government-bond CIP is sign-adjusted to match the USD-minus-CHF convention. "
-        "Series are annualized basis points."
-    )
+    note = "Source: Author's calculations using Swiss National Bank and FRED data; benchmark from Du, Keerati & Schreger (2020)."
     fig.text(0.13, 0.095, note, ha="left", va="bottom", fontsize=5.5, color=palette[8], wrap=True)
     plt.subplots_adjust(left=0.13, right=0.97, top=0.90, bottom=0.25)
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    plt.savefig(output_path)
+    os.makedirs(os.path.dirname(CONFIG["CHART_OUTPUT_PATH"]), exist_ok=True)
+    plt.savefig(CONFIG["CHART_OUTPUT_PATH"])
     plt.close(fig)
-
 def main() -> None:
     os.makedirs("data", exist_ok=True)
     os.makedirs("chart", exist_ok=True)
-    panel, diagnostics, benchmark, validation = build_outputs()
-    panel.to_csv(CONFIG["DATA_OUTPUT_PATH"], index_label="Date")
-    diagnostics.to_csv(CONFIG["DIAGNOSTICS_OUTPUT_PATH"], index=False)
-    benchmark.to_csv(CONFIG["BENCHMARK_OUTPUT_PATH"], index_label="Date")
-    validation.to_csv(CONFIG["VALIDATION_OUTPUT_PATH"], index=False)
-    plot_outputs(panel)
-    plot_outputs(panel, CONFIG["CHART_DKS_START_OUTPUT_PATH"], start_mode="dks")
-    plot_outputs(panel, CONFIG["CHART_OURS_START_QUARTER_OUTPUT_PATH"], start_mode="ours", quarter_lines=True)
+    output_panel, chart_panel = build_outputs()
+    output_panel.to_csv(CONFIG["DATA_OUTPUT_PATH"], index_label="Date")
+    plot_outputs(chart_panel)
     print(f"Saved monthly data to {CONFIG['DATA_OUTPUT_PATH']}")
-    print(f"Saved diagnostics to {CONFIG['DIAGNOSTICS_OUTPUT_PATH']}")
-    print(f"Saved benchmark to {CONFIG['BENCHMARK_OUTPUT_PATH']}")
-    print(f"Saved validation to {CONFIG['VALIDATION_OUTPUT_PATH']}")
     print(f"Saved chart to {CONFIG['CHART_OUTPUT_PATH']}")
-    print(f"Latest observation: {panel.dropna(how='all').index.max().date()}")
-
+    print(f"Latest observation: {output_panel.dropna(how='all').index.max().date()}")
 
 if __name__ == "__main__":
     main()
