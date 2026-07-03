@@ -1,9 +1,9 @@
-name: Update USD/CHF CIP Data and Chart
+﻿name: Update USD/CHF CIP Data and Chart
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '15 8 1 * *' # Runs at 8:15 AM UTC on the first day of each month
+    - cron: '15 8 1 * *'
 
 permissions:
   contents: write
@@ -18,17 +18,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-
-      - name: Install system dependencies for methodology PDF
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            cm-super \
-            texlive-latex-base \
-            texlive-latex-extra \
-            texlive-fonts-recommended \
-            latexmk
+          python-version: '3.12'
 
       - name: Install Python dependencies
         run: |
@@ -38,12 +28,6 @@ jobs:
       - name: Run USD/CHF CIP pipeline
         run: python usd_chf_cip.py
 
-      - name: Build methodology PDF
-        run: |
-          cd methodology
-          latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
-          cp main.pdf ../Methodology.pdf
-
       - name: Commit and push changes
         run: |
           git config user.name "CIP Update Bot"
@@ -51,9 +35,7 @@ jobs:
           git add -A \
             data/usd_chf_cip_deviations_monthly.csv \
             chart/usd_chf_cip_deviations.png \
-            Methodology.pdf \
             README.md \
-            methodology/main.tex \
             usd_chf_cip.py \
             requirements.txt
           if git diff --cached --quiet; then

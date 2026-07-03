@@ -425,11 +425,21 @@ def plot_outputs(panel: pd.DataFrame) -> None:
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     plt.setp(ax.get_xticklabels(), rotation=0, ha="center")
     ax.tick_params(axis="x", which="minor", bottom=True)
+    plt.subplots_adjust(left=0.13, right=0.97, top=0.90, bottom=0.17)
 
-    note = "Source: Author's calculations using Swiss National Bank and FRED data; benchmark from Du, Keerati & Schreger (2020)."
-    fig.text(0.13, 0.095, note, ha="left", va="bottom", fontsize=5.5, color=palette[8], wrap=True)
-    plt.subplots_adjust(left=0.13, right=0.97, top=0.90, bottom=0.25)
+    note = (
+        "Source: Author's calculations using Swiss National Bank and FRED data; "
+        "benchmark from Du, Keerati & Schreger (2020)."
+    )
 
+    fig.text(
+        0.13, 0.075,
+        note,
+        ha="left",
+        va="bottom",
+        fontsize=5.5,
+        color=palette[8]
+    )
     os.makedirs(os.path.dirname(CONFIG["CHART_OUTPUT_PATH"]), exist_ok=True)
     plt.savefig(CONFIG["CHART_OUTPUT_PATH"])
     plt.close(fig)
@@ -437,6 +447,7 @@ def main() -> None:
     os.makedirs("data", exist_ok=True)
     os.makedirs("chart", exist_ok=True)
     output_panel, chart_panel = build_outputs()
+    output_panel = output_panel.dropna(how="all")
     output_panel.to_csv(CONFIG["DATA_OUTPUT_PATH"], index_label="Date")
     plot_outputs(chart_panel)
     print(f"Saved monthly data to {CONFIG['DATA_OUTPUT_PATH']}")

@@ -1,4 +1,4 @@
-# Monthly USD/CHF Covered Interest Parity Deviations
+﻿# Monthly USD/CHF Covered Interest Parity Deviations
 
 ![Update USD/CHF CIP Data and Chart](https://github.com/iweigandi/usd-chf-cip-deviations/actions/workflows/update_cip.yml/badge.svg)
 
@@ -41,7 +41,7 @@ where \(S_t\) is the spot exchange rate in CHF per USD and \(F_t^T\) is the corr
 (r_USD,t^T - r_CHF,t^T) - [-log(F_t^T / S_t) / T]
 ```
 
-The series are annualized and reported in basis points. For details, see the [Methodological Note](Methodology.pdf).
+The series are annualized and reported in basis points.
 
 ---
 
@@ -62,4 +62,4 @@ pip install -r requirements.txt
 python usd_chf_cip.py
 ```
 
-The GitHub Action refreshes the data, chart, and methodology PDF monthly.
+The GitHub Action refreshes the data and chart monthly.
