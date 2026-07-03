@@ -429,7 +429,8 @@ def plot_outputs(panel: pd.DataFrame) -> None:
 
     note = (
         "Source: Author's calculations using Swiss National Bank and FRED data; "
-        "benchmark from Du, Keerati & Schreger (2020)."
+        "benchmark from Du, Keerati & Schreger (2020).\n"
+        "Data available at https://github.com/iweigandi/usd-chf-cip-deviations"
     )
 
     fig.text(
