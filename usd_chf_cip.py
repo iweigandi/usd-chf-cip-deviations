@@ -425,7 +425,7 @@ def plot_outputs(panel: pd.DataFrame) -> None:
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     plt.setp(ax.get_xticklabels(), rotation=0, ha="center")
     ax.tick_params(axis="x", which="minor", bottom=True)
-    plt.subplots_adjust(left=0.13, right=0.97, top=0.90, bottom=0.17)
+    plt.subplots_adjust(left=0.13, right=0.97, top=0.90, bottom=0.185)
 
     note = (
         "Source: Author's calculations using Swiss National Bank and FRED data; "
@@ -434,7 +434,7 @@ def plot_outputs(panel: pd.DataFrame) -> None:
     )
 
     fig.text(
-        0.13, 0.075,
+        0.13, 0.060,
         note,
         ha="left",
         va="bottom",
